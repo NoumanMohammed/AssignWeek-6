@@ -200,3 +200,74 @@ for epoch in range(epochs):
     print(f"Epoch [{epoch+1}/{epochs}] D_loss: {d_losses[-1]:.4f} | G_loss: {g_losses[-1]:.4f} | L1: {l1_losses[-1]:.4f}")
 
 print("Training complete!")
+
+
+
+
+# ============================================================
+# STEP 6: Evaluate and Visualize Translated Images
+# Commit: "Evaluated Pix2Pix and visualized image translation"
+# ============================================================
+
+G.eval()
+with torch.no_grad():
+    test_sat, test_map = dataset[0]
+    test_sat = test_sat.unsqueeze(0)
+    translated = G(test_sat).squeeze().permute(1, 2, 0).numpy()
+    translated = np.clip(translated * 0.5 + 0.5, 0, 1)  # Denormalize
+
+# --- Output 1: Image Translation Result (sample.jpg) ---
+fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+axes[0].imshow(test_sat.squeeze().permute(1, 2, 0).numpy() * 0.5 + 0.5)
+axes[0].set_title("Input (Satellite)")
+axes[0].axis("off")
+axes[1].imshow(translated)
+axes[1].set_title("Generated (Map)")
+axes[1].axis("off")
+axes[2].imshow(test_map.permute(1, 2, 0).numpy() * 0.5 + 0.5)
+axes[2].set_title("Ground Truth (Map)")
+axes[2].axis("off")
+plt.suptitle("Pix2Pix: Satellite-to-Map Translation")
+plt.tight_layout()
+plt.savefig("./outputs/sample.jpg")
+plt.close()
+print("Saved: ./outputs/sample.jpg")
+
+# --- Output 2: Training Loss Curves ---
+plt.figure(figsize=(8, 5))
+plt.plot(range(1, epochs+1), d_losses, label="Discriminator Loss", marker='o')
+plt.plot(range(1, epochs+1), g_losses, label="Generator Adversarial Loss", marker='s')
+plt.plot(range(1, epochs+1), l1_losses, label="Generator L1 Loss", marker='^')
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Pix2Pix GAN Training Loss Curves")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("./outputs/loss_curves.png")
+plt.close()
+print("Saved: ./outputs/loss_curves.png")
+
+# --- Output 3: Pixel-Level Error Heatmap (L1 per pixel) ---
+gt_map = test_map.permute(1, 2, 0).numpy() * 0.5 + 0.5
+l1_error = np.abs(translated - gt_map).mean(axis=2)  # Mean across channels
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+axes[0].imshow(translated)
+axes[0].set_title("Generated Map")
+axes[0].axis("off")
+axes[1].imshow(gt_map)
+axes[1].set_title("Ground Truth Map")
+axes[1].axis("off")
+im = axes[2].imshow(l1_error, cmap='hot')
+axes[2].set_title("Pixel Error Heatmap")
+axes[2].axis("off")
+plt.colorbar(im, ax=axes[2], fraction=0.046, pad=0.04)
+plt.suptitle("Pixel-Level L1 Error: Generated vs Ground Truth")
+plt.tight_layout()
+plt.savefig("./outputs/error_heatmap.png")
+plt.close()
+print("Saved: ./outputs/error_heatmap.png")
+
+print("\nAll outputs saved to ./outputs/")
+print("Done! Push to GitHub with: 'Evaluated Pix2Pix and visualized image translation'")
