@@ -1,0 +1,34 @@
+# Data files (datasets are too large for GitHub)
+data/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Model files (if any)
+*.pth
+*.pt
+*.h5
+
+# Log files
+*.log
