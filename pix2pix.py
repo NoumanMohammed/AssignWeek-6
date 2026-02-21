@@ -139,3 +139,64 @@ D = Discriminator()
 print("Models initialized.")
 print(f"  Generator params: {sum(p.numel() for p in G.parameters()):,}")
 print(f"  Discriminator params: {sum(p.numel() for p in D.parameters()):,}")
+
+
+
+
+
+# ============================================================
+# STEP 5: Train Pix2Pix GAN
+# Commit: "Trained Pix2Pix GAN for satellite-to-map translation"
+# ============================================================
+
+# Loss functions
+adversarial_loss = nn.BCELoss()
+l1_loss = nn.L1Loss()
+
+# Optimizers
+optimizer_G = optim.Adam(G.parameters(), lr=0.0002, betas=(0.5, 0.999))
+optimizer_D = optim.Adam(D.parameters(), lr=0.0002, betas=(0.5, 0.999))
+
+# Track losses for plotting
+d_losses, g_losses, l1_losses = [], [], []
+
+epochs = 10
+print(f"\nStarting training for {epochs} epochs...")
+
+for epoch in range(epochs):
+    epoch_d, epoch_g, epoch_l1 = 0, 0, 0
+    for sat_imgs, map_imgs in dataloader:
+        batch = sat_imgs.size(0)
+        real_label = torch.ones(batch, 1, 30, 30)   # PatchGAN real target
+        fake_label = torch.zeros(batch, 1, 30, 30)  # PatchGAN fake target
+
+        # --- Train Discriminator ---
+        fake_map = G(sat_imgs)
+        d_real = adversarial_loss(D(sat_imgs, map_imgs), real_label)
+        d_fake = adversarial_loss(D(sat_imgs, fake_map.detach()), fake_label)
+        d_loss = (d_real + d_fake) / 2
+
+        optimizer_D.zero_grad()
+        d_loss.backward()
+        optimizer_D.step()
+
+        # --- Train Generator ---
+        g_adv = adversarial_loss(D(sat_imgs, fake_map), real_label)  # Fool discriminator
+        g_l1 = l1_loss(fake_map, map_imgs) * 10                       # Pixel-level similarity (lambda=10)
+        g_loss = g_adv + g_l1
+
+        optimizer_G.zero_grad()
+        g_loss.backward()
+        optimizer_G.step()
+
+        epoch_d += d_loss.item()
+        epoch_g += g_adv.item()
+        epoch_l1 += g_l1.item()
+
+    n = len(dataloader)
+    d_losses.append(epoch_d / n)
+    g_losses.append(epoch_g / n)
+    l1_losses.append(epoch_l1 / n)
+    print(f"Epoch [{epoch+1}/{epochs}] D_loss: {d_losses[-1]:.4f} | G_loss: {g_losses[-1]:.4f} | L1: {l1_losses[-1]:.4f}")
+
+print("Training complete!")
