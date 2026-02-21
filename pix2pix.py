@@ -88,8 +88,6 @@ plt.close()
 print("Dataset loaded. Sample saved to ./outputs/sample.png")
 
 
-
-
 # ============================================================
 # STEP 4: Implement Pix2Pix Generator (U-Net) and Discriminator (PatchGAN)
 # Commit: "Implemented Pix2Pix Generator and Discriminator models"
@@ -141,9 +139,6 @@ print(f"  Generator params: {sum(p.numel() for p in G.parameters()):,}")
 print(f"  Discriminator params: {sum(p.numel() for p in D.parameters()):,}")
 
 
-
-
-
 # ============================================================
 # STEP 5: Train Pix2Pix GAN
 # Commit: "Trained Pix2Pix GAN for satellite-to-map translation"
@@ -167,8 +162,9 @@ for epoch in range(epochs):
     epoch_d, epoch_g, epoch_l1 = 0, 0, 0
     for sat_imgs, map_imgs in dataloader:
         batch = sat_imgs.size(0)
-        real_label = torch.ones(batch, 1, 30, 30)   # PatchGAN real target
-        fake_label = torch.zeros(batch, 1, 30, 30)  # PatchGAN fake target
+        patch = D(sat_imgs, map_imgs).shape[-1]       # Dynamically get patch size
+        real_label = torch.ones(batch, 1, patch, patch)   # PatchGAN real target
+        fake_label = torch.zeros(batch, 1, patch, patch)  # PatchGAN fake target
 
         # --- Train Discriminator ---
         fake_map = G(sat_imgs)
@@ -200,8 +196,6 @@ for epoch in range(epochs):
     print(f"Epoch [{epoch+1}/{epochs}] D_loss: {d_losses[-1]:.4f} | G_loss: {g_losses[-1]:.4f} | L1: {l1_losses[-1]:.4f}")
 
 print("Training complete!")
-
-
 
 
 # ============================================================
