@@ -86,3 +86,56 @@ plt.tight_layout()
 plt.savefig("./outputs/sample.png")
 plt.close()
 print("Dataset loaded. Sample saved to ./outputs/sample.png")
+
+
+
+
+# ============================================================
+# STEP 4: Implement Pix2Pix Generator (U-Net) and Discriminator (PatchGAN)
+# Commit: "Implemented Pix2Pix Generator and Discriminator models"
+# ============================================================
+
+# Generator: Simple U-Net style encoder-decoder
+class Generator(nn.Module):
+    def __init__(self):
+        super(Generator, self).__init__()
+        # Encoder
+        self.enc1 = nn.Conv2d(3, 64, 4, 2, 1)                      # 256->128
+        self.enc2 = nn.Sequential(nn.LeakyReLU(0.2), nn.Conv2d(64, 128, 4, 2, 1), nn.BatchNorm2d(128))  # 128->64
+        self.enc3 = nn.Sequential(nn.LeakyReLU(0.2), nn.Conv2d(128, 256, 4, 2, 1), nn.BatchNorm2d(256)) # 64->32
+        # Decoder with skip connections (U-Net style)
+        self.dec3 = nn.Sequential(nn.ReLU(), nn.ConvTranspose2d(256, 128, 4, 2, 1), nn.BatchNorm2d(128)) # 32->64
+        self.dec2 = nn.Sequential(nn.ReLU(), nn.ConvTranspose2d(256, 64, 4, 2, 1), nn.BatchNorm2d(64))  # 64->128 (256=128+128 skip)
+        self.dec1 = nn.Sequential(nn.ReLU(), nn.ConvTranspose2d(128, 3, 4, 2, 1), nn.Tanh())             # 128->256
+
+    def forward(self, x):
+        e1 = self.enc1(x)
+        e2 = self.enc2(e1)
+        e3 = self.enc3(e2)
+        d3 = self.dec3(e3)
+        d2 = self.dec2(torch.cat([d3, e2], dim=1))  # Skip connection
+        d1 = self.dec1(torch.cat([d2, e1], dim=1))  # Skip connection
+        return d1
+
+# Discriminator: PatchGAN (classifies patches as real/fake)
+class Discriminator(nn.Module):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(6, 64, 4, 2, 1),                                        # Input: sat+map concatenated
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(64, 128, 4, 2, 1), nn.BatchNorm2d(128), nn.LeakyReLU(0.2),
+            nn.Conv2d(128, 256, 4, 2, 1), nn.BatchNorm2d(256), nn.LeakyReLU(0.2),
+            nn.Conv2d(256, 1, 4, 1, 1), nn.Sigmoid()                          # Patch output
+        )
+
+    def forward(self, sat, map_img):
+        x = torch.cat([sat, map_img], dim=1)  # Concatenate input pair
+        return self.model(x)
+
+# Initialize models
+G = Generator()
+D = Discriminator()
+print("Models initialized.")
+print(f"  Generator params: {sum(p.numel() for p in G.parameters()):,}")
+print(f"  Discriminator params: {sum(p.numel() for p in D.parameters()):,}")
